@@ -1,13 +1,10 @@
 package server;
 
-import loggerService.Logger;
 import messageService.Message;
-import messageService.MessageJsonFileConverter;
+import messageService.MessageJsonConverter;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 
 import static server.MultiThreadChatServer.*;
@@ -22,113 +19,82 @@ public class MonoThreadClientMessageHandler implements Runnable {
 
     @Override
     public void run() {
-        Logger logger = new Logger(NAME_OF_LOG_FILE);
         while (!client.isClosed()) {
-            System.out.println("Server is processing message from client " + Thread.currentThread().getName());
+            System.out.println("Server is processing message from client " + client.toString());
+            LOGGER.log("Server is processing message from client " + client.toString());
 
-            // создаем временный файл для записи сообщения от клиента
-            String fileName = "messageFrom" + Thread.currentThread().getName() + ".json";
-            createMessageFile(fileName);
+            //получаем сообщение в виде json строки
+            String jsonText = receiveMessage(client);
 
-            //получаем сообщение и записываем во временный файл
-            receiveMessage(fileName, client);
-
-            // парсим json файл с сообщением в объект класса Message
-            MessageJsonFileConverter messageJsonFileConverter = new MessageJsonFileConverter();
-            Message message = messageJsonFileConverter.parseJsonFileToMessage(fileName);
+            //парсим json строку в объект класса Message
+            MessageJsonConverter messageJsonConverter = new MessageJsonConverter();
+            Message message = messageJsonConverter.parseJsonToMessage(jsonText);
 
             // отправляем сообщение в общий чат путем рассылки каждому участнику
-            sendMessageToChat(chatParticipantsList, fileName);
+            sendMessageToChat(chatParticipantsList, jsonText);
 
             // записываем отправленное в чат сообщение с указанием имени пользователя и времени отправки в файл логирования
-            logger.log(message.toString());
-
-            // удаляем временный файл с сообщением
-            deleteMessageFile(fileName);
+            System.out.println("Message from " + client.toString() + ": " + message);
+            LOGGER.log(message.toString());
 
             // проверяем условия продолжения работы с клиентом
             if (message.getMessage().equalsIgnoreCase(COMMAND_TO_EXIT)) {
-                System.out.println("Сlient " + Thread.currentThread().getName() + " initiated connection closure");
+                System.out.println("Сlient " + client.toString() + " initiated connection closure");
+                LOGGER.log("Сlient " + client.toString() + " initiated connection closure");
                 break;
             }
             // если условие выхода - неверно, возвращаемся в начало для считывания нового сообщения
         }
 
-        // если условие выхода - верно, закрываем сокет общения с клиентом и удаляем клиента из списка участников чата
+        // если условие выхода - верно, удаляем клиента из списка участников чата и  закрываем сокет общения с клиентом
         try {
-            client.close();
-            System.out.println("Client disconnected");
             if (chatParticipantsList.remove(client)) {
-                System.out.println("Client is deleted from chat participants' list");
+                System.out.println("Client " + client.toString() + " is deleted from chat participants' list");
+                LOGGER.log("Client " + client.toString() + " is deleted from chat participants' list");
             } else {
-                System.out.println("Client is not found in chat participants' list");
+                System.out.println("Client " + client.toString() +" is not found in chat participants' list");
+                LOGGER.log("Client " + client.toString() +" is not found in chat participants' list");
             }
+            client.close();
+            System.out.println("Client " + client.toString() + " disconnected");
+            LOGGER.log("Client " + client.toString() + " disconnected");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.print(Thread.currentThread().getName() + ": " + e.getMessage());
+            LOGGER.log(Thread.currentThread().getName() + ": " + e.getMessage());
         }
     }
 
-    public static void createMessageFile(String fileName) {
-        File messageFile = new File(fileName);
-        try {
-            if (messageFile.createNewFile()) {
-                System.out.println("File " + fileName + " created");
-            } else {
-                System.out.println("File " + fileName + " already exists");
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace(System.out);
-        }
-    }
-
-    public static void receiveMessage(String fileName, Socket client) {
+    public String receiveMessage(Socket client) {
+        String jsonText = null;
         // открываем канал чтения из сокета
-        try (BufferedInputStream bis = new BufferedInputStream(client.getInputStream());
-             BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(fileName))) {
-            System.out.println("BufferedInputStream created");
-
-            byte[] bytes = new byte[1024];
-            int data;
-            while ((data = bis.read(bytes)) != -1) {
-                bos.write(bytes, 0, data);
-            }
-
-        } catch (Exception ex) {
-            ex.printStackTrace(System.out);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(client.getInputStream()))) {
+            System.out.println("BufferedReader created to read messages from " + client.toString());
+            LOGGER.log("BufferedReader created to read messages from " + client.toString());
+            jsonText = br.readLine();
+        } catch (IOException e) {
+            System.out.print(Thread.currentThread().getName() + ": " + e.getMessage());
+            LOGGER.log(Thread.currentThread().getName() + ": " + e.getMessage());
         }
+        return jsonText;
     }
 
-    public static void sendMessageToChat(List<Socket> chatParticipantsList, String filename) {
+    public void sendMessageToChat(List<Socket> chatParticipantsList, String jsonText) {
         for (int i = 0; i < chatParticipantsList.size(); i++) {
             Socket chatParticipant = chatParticipantsList.get(i);
             // открываем канал записи в сокет
-            try (BufferedOutputStream bos = new BufferedOutputStream(chatParticipant.getOutputStream());
-                 BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filename))) {
-                System.out.println("BufferedOutputStream created");
-
-                byte[] bytes = new byte[1024];
-                int data;
-                while ((data = bis.read(bytes)) != -1) {
-                    bos.write(bytes, 0, data);
-                }
-                bos.flush();
-
-            } catch (Exception ex) {
-                ex.printStackTrace(System.out);
+            try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(chatParticipant.getOutputStream()))) {
+                System.out.println("BufferedWriter created for client " + client.toString()
+                        + " to send message to " + chatParticipant.toString());
+                LOGGER.log("BufferedWriter created for client " + client.toString()
+                        + " to send message to " + chatParticipant.toString());
+                bw.write(jsonText);
+                bw.flush();
+            } catch (IOException e) {
+                System.out.print(Thread.currentThread().getName() + ": " + e.getMessage());
+                LOGGER.log(Thread.currentThread().getName() + ": " + e.getMessage());
             }
-        }
-    }
-
-    public static void deleteMessageFile(String fileName) {
-        try {
-            if (Files.deleteIfExists(Paths.get(fileName))) {
-                System.out.println("File " + fileName + " deleted");
-            } else {
-                System.out.println("File " + fileName + " is not found");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }
+
 

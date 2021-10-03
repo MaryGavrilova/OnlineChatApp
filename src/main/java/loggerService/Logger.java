@@ -13,14 +13,15 @@ public class Logger {
     }
 
     public void log(String message) {
-        String currentTime = new SimpleDateFormat("yyyy:MM:dd  HH:mm:ss").format(Calendar.getInstance().getTime());
-        String messageForLogging = "[" + currentTime + "] " + message + "\n";
-        try (FileWriter file = new FileWriter(logFileName, true)) {
-            file.write(messageForLogging);
-            file.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!(message == null)) {
+            String currentTime = new SimpleDateFormat("yyyy:MM:dd  HH:mm:ss").format(Calendar.getInstance().getTime());
+            String messageForLogging = "[" + currentTime + "] " + message + "\n";
+            try (FileWriter fileWriter = new FileWriter(logFileName, true)) {
+                fileWriter.write(messageForLogging);
+                fileWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-
 }
