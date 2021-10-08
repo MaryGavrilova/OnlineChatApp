@@ -21,6 +21,6 @@ public class Message {
     @Override
     public String toString() {
         return "From: " + senderName +
-                "\nMessage: " + message;
+                " Message: " + message;
     }
 }
