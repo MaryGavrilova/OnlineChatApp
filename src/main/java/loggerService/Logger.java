@@ -24,4 +24,6 @@ public class Logger {
             }
         }
     }
+
+    //вынести в поля SimpleDateFormat FileWriter
 }

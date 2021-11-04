@@ -29,13 +29,14 @@ public class ChatReader extends Thread {
         try {
             // открываем поток чтения
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
             while (!socket.isClosed()) {
+
                 // проверяем поступило ли сообщение от сервера
                 if (bufferedReader.ready()) {
 
                     // получаем сообщение от сервера
                     String jsonText = receiveMessage(bufferedReader);
-                    System.out.println(Thread.currentThread().getName() + ": message is read from chat");
                     logger.log(Thread.currentThread().getName() + ": message is read from chat");
 
                     if (!(jsonText == null)) {
@@ -50,8 +51,7 @@ public class ChatReader extends Thread {
                         System.out.println(message);
 
                         // проверяем условия продолжения работы потока
-                        if (message.getSenderName().equals(chatParticipantName) & message.getMessage().equalsIgnoreCase(COMMAND_TO_EXIT)) {
-                            System.out.println(Thread.currentThread().getName() + ": Сlient initiated connection closure");
+                        if (message.getSenderName().equals(chatParticipantName) & message.getMessageText().equalsIgnoreCase(COMMAND_TO_EXIT)) {
                             logger.log(Thread.currentThread().getName() + ": Сlient initiated connection closure");
                             break;
                         }
@@ -60,7 +60,7 @@ public class ChatReader extends Thread {
                 // если условие выхода - неверно, возвращаемся в начало для считывания нового сообщения
             }
             // если условие выхода - верно, выходим из цикла и завершаем работу потока
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             logger.log(Thread.currentThread().getName() + " exception: " + e.getMessage());
         }
@@ -68,7 +68,7 @@ public class ChatReader extends Thread {
 
     public String receiveMessage(BufferedReader bufferedReader) {
         String jsonText = null;
-        try  {
+        try {
             jsonText = bufferedReader.readLine();
             return jsonText;
         } catch (IOException e) {

@@ -24,13 +24,14 @@ public class MonoThreadClientMessageHandler implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Server is processing messages from " + chatParticipant);
             logger.log("Server is processing messages from " + chatParticipant.toString());
+
             while (chatParticipant.isConnected()) {
+
                 // проверяем поступило ли сообщение от клиента
                 if (chatParticipant.isReadyToBeRead()) {
-                    System.out.println("Read message from " + chatParticipant);
                     logger.log("Read message from " + chatParticipant.toString());
+
                     //получаем сообщение в виде json строки
                     String jsonText = receiveMessage();
 
@@ -40,15 +41,14 @@ public class MonoThreadClientMessageHandler implements Runnable {
                         Message message = messageJsonConverter.parseJsonToMessage(jsonText);
 
                         // отправляем сообщение в общий чат путем рассылки каждому участнику
-                        sendMessageToChat(jsonText);
+                        sendMessage(jsonText);
+                        logger.log("Message is sent from" + chatParticipant.toString());
 
                         // записываем отправленное в чат сообщение с указанием имени пользователя и времени отправки в файл логирования
-                        System.out.println("Chat:\n" + message);
                         logger.log(message.toString());
 
                         // проверяем условия продолжения работы с клиентом
-                        if (message.getMessage().equalsIgnoreCase(COMMAND_TO_EXIT)) {
-                            System.out.println(chatParticipant + " initiated connection closure");
+                        if (message.getMessageText().equalsIgnoreCase(COMMAND_TO_EXIT)) {
                             logger.log(chatParticipant.toString() + " initiated connection closure");
                             break;
                         }
@@ -57,37 +57,40 @@ public class MonoThreadClientMessageHandler implements Runnable {
                 // если условие выхода - неверно, возвращаемся в начало для считывания нового сообщения
             }
 
-        // если условие выхода - верно, удаляем клиента из списка участников чата
+            // если условие выхода - верно, удаляем клиента из списка участников чата
             if (chatParticipantsList.remove(chatParticipant)) {
-                 System.out.println(chatParticipant + " is deleted from chat participants' list");
                 logger.log(chatParticipant.toString() + " is deleted from chat participants' list");
             } else {
-                System.out.println(chatParticipant + " is not found in chat participants' list");
                 logger.log(chatParticipant.toString() + " is not found in chat participants' list");
             }
+
             // отключаем клиента через закрытие сокета
             chatParticipant.disconnect();
-            System.out.println(chatParticipant + " disconnected");
             logger.log(chatParticipant.toString() + " disconnected");
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             logger.log(Thread.currentThread().getName() + " exception: " + e.getMessage());
         }
     }
 
-    public String receiveMessage() throws IOException {
-        return chatParticipant.getBufferedReader().readLine();
+    public String receiveMessage() {
+        String jsonText = null;
+        try {
+            jsonText = chatParticipant.getBufferedReader().readLine();
+            return jsonText;
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.log(Thread.currentThread().getName() + " exception: " + e.getMessage());
+        }
+        return jsonText;
     }
 
-    public void sendMessageToChat(String jsonText) {
+    public void sendMessage(String jsonText) {
         for (ChatParticipant currentChatParticipant : chatParticipantsList) {
             try {
-                System.out.println("Message is sent from " + chatParticipant.toString()
-                        + " to " + currentChatParticipant.toString());
-                logger.log("Message is sent " + chatParticipant.toString()
-                        + " to " + currentChatParticipant.toString());
                 currentChatParticipant.getBufferedWriter().write(jsonText);
+                currentChatParticipant.getBufferedWriter().newLine();
                 currentChatParticipant.getBufferedWriter().flush();
             } catch (IOException e) {
                 e.printStackTrace();
