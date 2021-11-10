@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -20,12 +21,20 @@ public class MultiThreadChatServer {
     public static final String NAME_OF_SETTINGS_FILE = "serverSettings.txt";
     public static final String NAME_OF_LOG_FILE = "serverFile.log";
     public static final String COMMAND_TO_EXIT = "/exit";
+    public static final String DATE_PATTERN_FOR_LOGGER = "yyyy:MM:dd  HH:mm:ss";
 
     public static void main(String[] args) {
 
         // создаем логгер для записи ошибок и сообщений от клиентов
-        Logger logger = new Logger(Paths.get(NAME_OF_LOG_FILE));
-
+        Logger logger = null;
+        try {
+            logger = new Logger(new FileWriter(NAME_OF_LOG_FILE), new SimpleDateFormat(DATE_PATTERN_FOR_LOGGER));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (logger == null) {
+            System.exit(0);
+        }
 
         // создаем список всех подключившихся участников чата
         List<ChatParticipant> chatParticipantsList = new CopyOnWriteArrayList<>();
@@ -67,20 +76,21 @@ public class MultiThreadChatServer {
             // закрытие пула после завершения работы всех потоков, обрабатывающих сообщения
             serverExecutorService.shutdown();
             logger.log("Main Server: ExecutorService shut down");
+            logger.close();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             logger.log("Main Server exception: " + e.getMessage());
         }
     }
 
-    public static int readServerSettingsFile(Logger logger, File file) {
+    public static int readServerSettingsFile(Logger logger, Path path) {
         int port = 0;
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(path.toFile()))) {
             String s = br.readLine();
             port = Integer.parseInt(s);
             return port;
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
             logger.log("Main Server exception: " + e.getMessage());
         }

@@ -3,8 +3,8 @@ package client;
 import loggerService.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.io.BufferedWriter;
@@ -17,25 +17,28 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 public class ChatWriterTest {
 
     static Scanner scanner;
-
-    @Mock
-    static Logger logger = Mockito.mock(Logger.class);
-    static Socket socket = Mockito.mock(Socket.class);
+    static ChatWriter chatWriter;
+    static Logger logger;
+    static Socket socket;
+    static BufferedWriter bufferedWriter;
 
     @BeforeAll
     static void beforeAll() {
+        logger = Mockito.mock(Logger.class);
         Mockito.doNothing().when(logger).log(Mockito.anyString());
+        socket = Mockito.mock(Socket.class);
         scanner = new Scanner(System.in);
+        chatWriter = new ChatWriter(null, "ChatWriter", socket, "Mary", logger, scanner);
+    }
+
+    @BeforeEach
+    void initTest() {
+        bufferedWriter = Mockito.mock(BufferedWriter.class);
     }
 
     @Test
     void test_sendMessage_exceptionInWriteMethod() throws IOException {
-        String chatParticipantName = "Mary";
-
-        BufferedWriter bufferedWriter = Mockito.mock(BufferedWriter.class);
         Mockito.doThrow(IOException.class).when(bufferedWriter).write(Mockito.anyString());
-
-        ChatWriter chatWriter = new ChatWriter(null, "ChatWriter", socket, chatParticipantName, logger, scanner);
 
         assertDoesNotThrow(() -> {
             chatWriter.sendMessage(bufferedWriter, Mockito.anyString());
@@ -44,12 +47,7 @@ public class ChatWriterTest {
 
     @Test
     void test_sendMessage_exceptionInNewLineMethod() throws IOException {
-        String chatParticipantName = "Mary";
-
-        BufferedWriter bufferedWriter = Mockito.mock(BufferedWriter.class);
         Mockito.doThrow(IOException.class).when(bufferedWriter).newLine();
-
-        ChatWriter chatWriter = new ChatWriter(null, "ChatWriter", socket, chatParticipantName, logger, scanner);
 
         assertDoesNotThrow(() -> {
             chatWriter.sendMessage(bufferedWriter, Mockito.anyString());
@@ -58,12 +56,7 @@ public class ChatWriterTest {
 
     @Test
     void test_sendMessage_exceptionInFlushMethod() throws IOException {
-        String chatParticipantName = "Mary";
-
-        BufferedWriter bufferedWriter = Mockito.mock(BufferedWriter.class);
         Mockito.doThrow(IOException.class).when(bufferedWriter).flush();
-
-        ChatWriter chatWriter = new ChatWriter(null, "ChatWriter", socket, chatParticipantName, logger, scanner);
 
         assertDoesNotThrow(() -> {
             chatWriter.sendMessage(bufferedWriter, Mockito.anyString());

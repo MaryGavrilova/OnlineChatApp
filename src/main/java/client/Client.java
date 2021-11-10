@@ -5,6 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.Scanner;
 
 public class Client {
@@ -12,13 +15,22 @@ public class Client {
     public static final String NAME_OF_SETTINGS_FILE = "clientSettings.txt";
     public static final String NAME_OF_LOG_FILE = "clientFile.log";
     public static final String COMMAND_TO_EXIT = "/exit";
+    public static final String DATE_PATTERN_FOR_LOGGER = "yyyy:MM:dd  HH:mm:ss";
 
     public static void main(String[] args) {
         // создаем логгер для записи ошибок и сообщений
-        Logger logger = new Logger(NAME_OF_LOG_FILE);
+        Logger logger = null;
+        try {
+            logger = new Logger(new FileWriter(NAME_OF_LOG_FILE), new SimpleDateFormat(DATE_PATTERN_FOR_LOGGER));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (logger == null) {
+            System.exit(0);
+        }
 
         // читаем настройки приложения из файла настроек для определения порта
-        int port = readClientSettingsFile(logger, new File(NAME_OF_SETTINGS_FILE));
+        int port = readClientSettingsFile(logger, Paths.get(NAME_OF_SETTINGS_FILE));
         if (port > 1 & port < 65535) {
             logger.log("Client: Port " + port + " tuned in");
         } else {
@@ -65,15 +77,15 @@ public class Client {
             // закрываем сокет общения на стороне клиента после завершения работы потоков чтения и записи
             socket.close();
             logger.log("Client: disconnected");
-        } catch (InterruptedException | IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             logger.log("Client exception: " + e.getMessage());
         }
     }
 
-    public static int readClientSettingsFile(Logger logger, File file) {
+    public static int readClientSettingsFile(Logger logger, Path path) {
         int port = 0;
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(path.toFile()))) {
             String data = br.readLine();
             port = Integer.parseInt(data);
         } catch (IOException | NumberFormatException e) {

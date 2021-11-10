@@ -1,22 +1,30 @@
 package loggerService;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 public class Logger {
-    protected String logFileName;
+    protected final FileWriter fileWriter;
+    protected final SimpleDateFormat simpleDateFormat;
 
-    public Logger(String logFileName) {
-        this.logFileName = logFileName;
+    public Logger(FileWriter fileWriter, SimpleDateFormat simpleDateFormat) throws IOException {
+        this. fileWriter = fileWriter;
+        this.simpleDateFormat = simpleDateFormat;
+    }
+
+    public void close() throws IOException {
+        fileWriter.close();
     }
 
     public void log(String message) {
-        if (!(message == null)) {
-            String currentTime = new SimpleDateFormat("yyyy:MM:dd  HH:mm:ss").format(Calendar.getInstance().getTime());
+        if (!StringUtils.isBlank(message)) {
+            String currentTime = simpleDateFormat.format(Calendar.getInstance().getTime());
             String messageForLogging = "[" + currentTime + "] " + message + "\n";
-            try (FileWriter fileWriter = new FileWriter(logFileName, true)) {
+            try {
                 fileWriter.write(messageForLogging);
                 fileWriter.flush();
             } catch (IOException e) {
@@ -24,6 +32,4 @@ public class Logger {
             }
         }
     }
-
-    //вынести в поля SimpleDateFormat FileWriter
 }

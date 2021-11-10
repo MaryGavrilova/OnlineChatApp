@@ -5,10 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -20,39 +18,37 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class ClientTest {
 
-    @Mock
-    static Logger logger = Mockito.mock(Logger.class);
+    static Logger logger;
+    static Path path;
 
     @BeforeAll
-    static void beforeAll(){
+    static void beforeAll() {
+        path = Paths.get("setting.txt");
+        logger = Mockito.mock(Logger.class);
         Mockito.doNothing().when(logger).log(Mockito.anyString());
     }
 
     @Test
     void test_readClientSettingsFile_success() throws IOException {
-        File file = new File("setting.txt");
-        file.createNewFile();
-        Files.writeString(Paths.get("setting.txt"), "8888", StandardCharsets.UTF_8);
+        Files.createFile(path);
+        Files.writeString(path, "8888", StandardCharsets.UTF_8);
         int expected = 8888;
-        int result = readClientSettingsFile(logger, file);
+        int result = readClientSettingsFile(logger, path);
         Assertions.assertEquals(expected, result);
     }
 
     @Test
     void test_readClientSettingsFile_exception_notExistFile() {
-        File notExistFile = new File("setting.txt");
-            assertDoesNotThrow(() -> {
-                readClientSettingsFile(logger, notExistFile);
-            });
+        assertDoesNotThrow(() -> {
+            readClientSettingsFile(logger, path);
+        });
     }
-
 
     @Test
     void test_readClientSettingsFile_exception_fileWithNullContent() throws IOException {
-        File file = new File("setting.txt");
-        file.createNewFile();
+        Files.createFile(path);
         assertDoesNotThrow(() -> {
-            readClientSettingsFile(logger, file);
+            readClientSettingsFile(logger, path);
         });
     }
 

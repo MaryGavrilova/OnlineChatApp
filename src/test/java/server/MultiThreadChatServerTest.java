@@ -5,56 +5,50 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static client.Client.readClientSettingsFile;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static server.MultiThreadChatServer.readServerSettingsFile;
 
 public class MultiThreadChatServerTest {
-    @Mock
-    static Logger logger = Mockito.mock(Logger.class);
+
+    static Logger logger;
+    static Path path;
 
     @BeforeAll
-    static void beforeAll(){
+    static void beforeAll() {
+        logger = Mockito.mock(Logger.class);
         Mockito.doNothing().when(logger).log(Mockito.anyString());
+        path = Paths.get("setting.txt");
     }
 
     @Test
     void test_readServerSettingsFile_success() throws IOException {
-       Path path = Paths.get("setting.txt");
-
         Files.createFile(path);
-        File file = new File("setting.txt");
-        file.createNewFile();
-        Files.writeString(Paths.get("setting.txt"), "8888", StandardCharsets.UTF_8);
+        Files.writeString(path, "8888", StandardCharsets.UTF_8);
         int expected = 8888;
-        int result = readClientSettingsFile(logger, path.toFile());
+        int result = readServerSettingsFile(logger, path);
         Assertions.assertEquals(expected, result);
     }
 
     @Test
     void test_readServerSettingsFile_exception_notExistFile() {
-        File notExistFile = new File("setting.txt");
         assertDoesNotThrow(() -> {
-            readClientSettingsFile(logger, notExistFile);
+            readServerSettingsFile(logger, path);
         });
     }
 
-
     @Test
     void test_readServerSettingsFile_exception_fileWithNullContent() throws IOException {
-        File file = new File("setting.txt");
-        file.createNewFile();
+        Files.createFile(path);
         assertDoesNotThrow(() -> {
-            readClientSettingsFile(logger, file);
+            readServerSettingsFile(logger, path);
         });
     }
 
